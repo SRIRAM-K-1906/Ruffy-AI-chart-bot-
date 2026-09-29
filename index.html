@@ -1,0 +1,1716 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ruffy.ai — Educational AI Agent</title>
+    <meta name="description" content="Ruffy AI — Your personal educational AI tutor. Learn any topic with roadmaps, lessons, and quizzes powered by Gemini AI.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        :root {
+            --bg-sidebar: #f9f9f9;
+            --bg-main: #ffffff;
+            --text-primary: #0d0d0d;
+            --text-secondary: #676767;
+            --border-color: #e5e5e5;
+            --accent-color: #10a37f;
+            --text-primary: #111111;
+            --text-secondary: #888888;
+            --border-color: #ebebeb;
+            --accent-color: #7c5cfc;
+            --accent-glow: rgba(124,92,252,0.15);
+            --input-bg: #f4f4f6;
+            --sidebar-width: 260px;
+            --learn-primary: #7c5cfc;
+            --learn-secondary: #b39dfc;
+            --learn-success: #22c55e;
+            --learn-danger: #ef4444;
+            --learn-warning: #f59e0b;
+            --radius-lg: 18px;
+            --radius-md: 12px;
+            --radius-sm: 8px;
+            --shadow-soft: 0 2px 16px rgba(0,0,0,0.06);
+            --shadow-lift: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        body.dark-mode {
+            --bg-sidebar: #18181b;
+            --bg-main: #111113;
+            --text-primary: #f0f0f2;
+            --text-secondary: #71717a;
+            --border-color: rgba(255,255,255,0.08);
+            --accent-color: #9b7dff;
+            --accent-glow: rgba(155,125,255,0.18);
+            --input-bg: #27272a;
+            --shadow-soft: 0 2px 16px rgba(0,0,0,0.3);
+            --shadow-lift: 0 8px 32px rgba(0,0,0,0.4);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ═══════════════════════════════════════════
+           SIDEBAR
+        ═══════════════════════════════════════════ */
+        aside {
+            width: var(--sidebar-width);
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 14px 10px;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .sidebar-logo-container {
+            padding: 8px 10px 14px;
+            display: flex;
+            align-items: center;
+        }
+        .sidebar-logo {
+            height: 64px;
+            width: auto;
+            max-width: 200px;
+            object-fit: contain;
+        }
+
+        .new-chat-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 14px;
+            font-family: inherit;
+            font-size: 0.875rem;
+        }
+        .new-chat-btn:hover {
+            background: var(--accent-glow);
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        /* ── Learn Progress Widget ── */
+        .learn-progress-widget {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, rgba(124,92,252,0.07), rgba(179,157,252,0.04));
+            display: none;
+        }
+        .learn-progress-widget.visible { display: block; }
+        .lpw-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--learn-primary);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 5px;
+        }
+        .lpw-topic {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 7px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .lpw-bar-wrap {
+            height: 4px;
+            background: var(--border-color);
+            border-radius: 99px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+        .lpw-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--learn-primary), var(--learn-secondary));
+            border-radius: 99px;
+            transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+        }
+        .lpw-stats {
+            font-size: 0.73rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        .lpw-continue-btn {
+            width: 100%;
+            padding: 7px;
+            background: linear-gradient(135deg, var(--learn-primary), var(--learn-secondary));
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: opacity 0.2s;
+            letter-spacing: 0.01em;
+        }
+        .lpw-continue-btn:hover { opacity: 0.88; }
+
+        /* ── History ── */
+        .history-section {
+            flex-grow: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-color) transparent;
+        }
+        .history-group { margin-bottom: 18px; }
+        .history-group-title {
+            font-size: 0.67rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin: 0 0 5px 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+        }
+        .history-item {
+            padding: 8px 10px;
+            border-radius: var(--radius-sm);
+            font-size: 0.84rem;
+            color: var(--text-primary);
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: all 0.15s;
+        }
+        .history-item:hover { background: var(--input-bg); }
+        .history-item.active {
+            background: var(--accent-glow);
+            color: var(--accent-color);
+            font-weight: 500;
+        }
+
+        /* ── Sidebar Footer ── */
+        .sidebar-footer {
+            padding-top: 10px;
+            border-top: 1px solid var(--border-color);
+        }
+        .profile-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            transition: background 0.15s;
+            color: var(--text-secondary);
+            font-size: 0.84rem;
+        }
+        .profile-item:hover { background: var(--input-bg); color: var(--text-primary); }
+        .avatar-circle {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, var(--learn-primary), #10c9a0);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.78rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        /* ═══════════════════════════════════════════
+           MAIN AREA
+        ═══════════════════════════════════════════ */
+        main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+            background: var(--bg-main);
+        }
+
+        .header-title {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 1.1rem;
+            background: linear-gradient(135deg, var(--learn-primary), #10c9a0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.01em;
+        }
+
+        /* ── Theme Toggle ── */
+        .icon-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            padding: 7px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+        .icon-btn:hover {
+            background: var(--input-bg);
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        /* ═══════════════════════════════════════════
+           CHAT
+        ═══════════════════════════════════════════ */
+        .chat-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-bottom: 160px;
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-color) transparent;
+        }
+
+        .message-wrapper {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 18px 24px;
+            display: flex;
+            gap: 14px;
+            animation: msgFadeIn 0.3s ease;
+        }
+        @keyframes msgFadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
+            font-size: 0.72rem;
+            letter-spacing: 0.02em;
+        }
+        .user .message-avatar {
+            background: var(--input-bg);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+        .bot .message-avatar {
+            background: linear-gradient(135deg, var(--learn-primary), #10c9a0);
+            color: white;
+            box-shadow: 0 2px 8px var(--accent-glow);
+        }
+
+        .message-content {
+            flex-grow: 1;
+            line-height: 1.7;
+            color: var(--text-primary);
+            font-size: 0.96rem;
+        }
+        .message-content h1, .message-content h2, .message-content h3 {
+            margin-top: 1.2em;
+            font-family: 'Outfit', sans-serif;
+        }
+        .message-content pre {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 14px 16px;
+            overflow-x: auto;
+            margin: 10px 0;
+            font-size: 0.875em;
+        }
+        .message-content code {
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.875em;
+        }
+        .message-content p code {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            padding: 2px 6px;
+            border-radius: 5px;
+        }
+
+        /* ── Typing Indicator ── */
+        .typing-dots { display: flex; gap: 5px; padding: 8px 0; }
+        .dot {
+            width: 7px; height: 7px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite;
+            opacity: 0.6;
+        }
+        .dot:nth-child(2) { animation-delay: 0.18s; }
+        .dot:nth-child(3) { animation-delay: 0.36s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.6; }
+            40% { transform: translateY(-7px); opacity: 1; }
+        }
+
+        /* ═══════════════════════════════════════════
+           INPUT BAR
+        ═══════════════════════════════════════════ */
+        .input-outer-container {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            padding: 16px 24px 20px;
+            background: linear-gradient(transparent, var(--bg-main) 42%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .input-box {
+            max-width: 752px;
+            width: 100%;
+            background: var(--input-bg);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: flex-end;
+            padding: 10px 12px 10px 16px;
+            box-shadow: var(--shadow-soft);
+            border: 1.5px solid var(--border-color);
+            transition: border-color 0.25s, box-shadow 0.25s;
+            gap: 8px;
+        }
+        .input-box:focus-within {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 4px var(--accent-glow), var(--shadow-soft);
+        }
+        .input-box textarea {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            padding: 5px 0;
+            font-family: inherit;
+            font-size: 0.96rem;
+            resize: none;
+            max-height: 180px;
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+        .input-box textarea::placeholder { color: var(--text-secondary); }
+        .input-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+        .send-btn {
+            background: linear-gradient(135deg, var(--learn-primary), var(--learn-secondary));
+            color: white;
+            width: 34px; height: 34px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px var(--accent-glow);
+        }
+        .send-btn:hover { transform: scale(1.08); box-shadow: 0 4px 14px var(--accent-glow); }
+        .send-btn:disabled {
+            background: var(--border-color);
+            box-shadow: none;
+            transform: none;
+            cursor: default;
+        }
+
+        .footer-note {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-top: 9px;
+            text-align: center;
+            opacity: 0.8;
+        }
+
+        /* ═══════════════════════════════════════════
+           MODE SELECTOR
+        ═══════════════════════════════════════════ */
+        .mode-selector-wrap { position: relative; display: flex; align-items: center; flex-shrink: 0; }
+        .mode-btn {
+            display: flex; align-items: center; gap: 5px;
+            padding: 5px 11px;
+            border-radius: 99px;
+            border: 1.5px solid var(--border-color);
+            background: var(--bg-main);
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            font-family: inherit;
+        }
+        .mode-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
+        .mode-btn.mode-visual { border-color: #7c5cfc; color: #7c5cfc; background: rgba(124,92,252,0.07); }
+        .mode-btn.mode-learn  { border-color: var(--learn-primary); color: var(--learn-primary); background: rgba(124,92,252,0.07); }
+
+        .mode-dropdown {
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 0;
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lift);
+            overflow: hidden;
+            z-index: 100;
+            min-width: 170px;
+            display: none;
+            flex-direction: column;
+        }
+        .mode-dropdown.open { display: flex; animation: fadeUp 0.15s ease; }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .mode-option {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: background 0.12s;
+            color: var(--text-primary);
+            font-family: inherit;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+        }
+        .mode-option:hover { background: var(--input-bg); }
+        .mode-option.active-option { font-weight: 600; color: var(--accent-color); }
+        .mode-option-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+        /* ═══════════════════════════════════════════
+           VISUAL MODE CARDS
+        ═══════════════════════════════════════════ */
+        .visual-card {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .visual-card-header {
+            padding: 16px 20px 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .visual-card-header h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            margin: 0;
+        }
+        .visual-description {
+            padding: 14px 20px;
+            font-size: 0.92rem;
+            line-height: 1.7;
+        }
+        .step-card {
+            margin: 8px 16px;
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+        .step-header {
+            padding: 12px 16px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.15s;
+        }
+        .step-header:hover { background: var(--input-bg); }
+        .step-number {
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            background: var(--accent-glow);
+            color: var(--accent-color);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .step-body { padding: 12px 16px; font-size: 0.875rem; line-height: 1.65; }
+        .step-video { width: 100%; border-radius: var(--radius-sm); margin-top: 10px; }
+
+        /* ═══════════════════════════════════════════
+           IMAGEGEN CARDS (kept for compatibility)
+        ═══════════════════════════════════════════ */
+        .imagegen-card {
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-top: 12px;
+        }
+        .imagegen-card h2 { margin: 0 0 12px; font-size: 1.05rem; font-family: 'Outfit', sans-serif; color: var(--accent-color); }
+        .imagegen-card .ig-content { font-size: 0.92rem; line-height: 1.7; margin-bottom: 16px; }
+        .imagegen-card .mermaid-wrap { background: #fff; border-radius: var(--radius-sm); padding: 16px; overflow-x: auto; }
+        body.dark-mode .imagegen-card .mermaid-wrap { background: #1e1e2e; }
+        .imagegen-card .steps-list { list-style: none; padding: 0; margin: 0; }
+        .imagegen-card .steps-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+        .imagegen-card .steps-list li:last-child { border-bottom: none; }
+        .imagegen-card canvas { max-width: 100%; border-radius: var(--radius-sm); }
+        .imagegen-card img.ig-image { width: 100%; border-radius: var(--radius-md); margin-top: 8px; display: block; }
+
+        /* ═══════════════════════════════════════════
+           LOGIN OVERLAY
+        ═══════════════════════════════════════════ */
+        #loginOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            z-index: 9999; display: none; align-items: center; justify-content: center;
+        }
+        .login-card {
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 44px 48px;
+            display: flex; flex-direction: column; align-items: center;
+            box-shadow: var(--shadow-lift);
+            max-width: 420px; width: 90%;
+            text-align: center;
+            animation: cardPop 0.35s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @keyframes cardPop {
+            from { opacity: 0; transform: scale(0.92) translateY(20px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .login-logo { width: 300px; margin-bottom: 1.4rem; object-fit: contain; }
+
+        /* ═══════════════════════════════════════════
+           INTRO OVERLAY
+        ═══════════════════════════════════════════ */
+        #introOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 10000;
+            display: flex; align-items: center; justify-content: center;
+            transition: opacity 0.9s ease;
+        }
+        #introVideo { width: 100%; height: 100%; object-fit: cover; }
+
+        /* ═══════════════════════════════════════════
+           LEARN AGENT CARDS
+        ═══════════════════════════════════════════ */
+        .learn-agent-card {
+            border: 1.5px solid rgba(124,92,252,0.35);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(124,92,252,0.05), rgba(16,201,160,0.03));
+            margin: 10px 0;
+            box-shadow: 0 4px 20px rgba(124,92,252,0.08);
+            backdrop-filter: blur(4px);
+        }
+        .learn-agent-card h3 {
+            font-family: 'Outfit', sans-serif;
+            margin-top: 0;
+            color: var(--learn-primary);
+            font-weight: 700;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .learn-agent-list {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            margin: 14px 0;
+        }
+        .learn-agent-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            background: var(--bg-main);
+            border: 1.5px solid var(--border-color);
+            font-size: 0.88rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .learn-agent-item.completed {
+            border-color: rgba(34,197,94,0.4);
+            background: rgba(34,197,94,0.05);
+            color: var(--learn-success);
+        }
+        .learn-agent-item.current {
+            border-color: rgba(124,92,252,0.5);
+            background: rgba(124,92,252,0.07);
+            box-shadow: 0 2px 10px rgba(124,92,252,0.12);
+            color: var(--learn-primary);
+            font-weight: 600;
+        }
+        .learn-agent-item.locked { opacity: 0.45; }
+
+        .learn-agent-btn {
+            background: linear-gradient(135deg, var(--learn-primary), var(--learn-secondary));
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: var(--radius-md);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.25s;
+            box-shadow: 0 4px 14px rgba(124,92,252,0.25);
+            width: 100%;
+            text-align: center;
+            margin-top: 10px;
+            letter-spacing: 0.01em;
+        }
+        .learn-agent-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 22px rgba(124,92,252,0.35);
+        }
+
+        /* ── Quiz ── */
+        .quiz-agent-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 14px;
+        }
+        .quiz-agent-opt {
+            background: var(--bg-main);
+            border: 1.5px solid var(--border-color);
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: left;
+            width: 100%;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-primary);
+        }
+        .quiz-agent-opt:hover:not(.disabled) {
+            border-color: var(--learn-primary);
+            background: rgba(124,92,252,0.05);
+            transform: translateX(2px);
+        }
+        .quiz-agent-opt.selected {
+            border-color: var(--learn-primary);
+            background: rgba(124,92,252,0.08);
+            font-weight: 600;
+        }
+        .quiz-agent-opt.correct {
+            border-color: var(--learn-success) !important;
+            background: rgba(34,197,94,0.08) !important;
+            color: var(--learn-success);
+            font-weight: 600;
+        }
+        .quiz-agent-opt.wrong {
+            border-color: var(--learn-danger) !important;
+            background: rgba(239,68,68,0.08) !important;
+            color: var(--learn-danger);
+            font-weight: 600;
+        }
+        .quiz-agent-opt.disabled { cursor: default; transform: none; }
+
+        /* ── Learn Chips ── */
+        .learn-chips-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 14px;
+        }
+        .learn-chip-btn {
+            background: var(--input-bg);
+            border: 1.5px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 550;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .learn-chip-btn:hover {
+            border-color: var(--learn-primary);
+            background: rgba(108,61,232,0.05);
+            color: var(--learn-primary);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Intro Video -->
+    <div id="introOverlay">
+        <video id="introVideo" autoplay muted playsinline preload="auto">
+            <source src="intro.mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginOverlay">
+        <div class="login-card">
+            <img src="logo.png" alt="Ruffy.ai" class="login-logo"
+                onerror="this.onerror=null; this.src=''; this.alt='Ruffy.ai'">
+            <h2 style="margin-bottom:0.4rem; font-family:'Outfit',sans-serif;">Welcome to Ruffy.ai</h2>
+            <p style="color:var(--text-secondary); margin-bottom:1.8rem; font-size:0.9rem;">Your AI-powered educational tutor</p>
+
+            <div id="g_id_onload"
+                data-client_id="734218561972-jlkcf7op0cvp13j0hijck0oq0a27gd55.apps.googleusercontent.com"
+                data-context="signin" data-ux_mode="popup" data-callback="handleCredentialResponse"
+                data-auto_prompt="false">
+            </div>
+            <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline"
+                data-text="signin_with" data-size="large" data-logo_alignment="left">
+            </div>
+
+            <div style="margin-top:18px; text-align:center;">
+                <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:10px;">Testing without a Client ID?</p>
+                <button onclick="continueAsGuest()"
+                    style="padding:10px 20px; border-radius:8px; border:1px solid var(--border-color); background:var(--input-bg); cursor:pointer; font-weight:600; font-family:inherit; font-size:0.88rem;">
+                    Continue as Guest
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside>
+        <div class="sidebar-logo-container">
+            <img src="logo.png" alt="Ruffy.ai Logo" class="sidebar-logo"
+                onerror="this.style.display='none'">
+        </div>
+
+        <button class="new-chat-btn" onclick="startNewChat()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            New Chat
+        </button>
+
+        <!-- Learning Progress Widget -->
+        <div class="learn-progress-widget" id="learnProgressWidget">
+            <div class="lpw-label">🎓 Currently Learning</div>
+            <div class="lpw-topic" id="lpwTopic">—</div>
+            <div class="lpw-bar-wrap">
+                <div class="lpw-bar" id="lpwBar" style="width:0%"></div>
+            </div>
+            <div class="lpw-stats" id="lpwStats">0 / 0 topics done</div>
+            <button class="lpw-continue-btn" onclick="resumeAgentSession()">Resume Learning →</button>
+        </div>
+
+        <div class="history-section" id="sidebarHistory">
+            <div class="history-group">
+                <div class="history-group-title">Today</div>
+                <div id="historyList"></div>
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="profile-item" id="userProfileInfo">
+                <div class="avatar-circle" id="userAvatar">U</div>
+                <div style="font-size:0.88rem; font-weight:500;" id="userName">User Profile</div>
+            </div>
+            <div class="profile-item" onclick="signOut()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                <div style="font-size:0.88rem; font-weight:500;">Sign Out</div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main>
+        <header>
+            <div class="header-title">Ruffy.ai</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <button class="icon-btn" id="themeToggle" title="Toggle Dark/Light Mode">
+                    <svg id="sunIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg id="moonIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <div class="chat-container" id="chatContainer">
+            <div class="message-wrapper bot">
+                <div class="message-avatar">R</div>
+                <div class="message-content">
+                    Hello! I'm <strong>Ruffy.ai</strong> 🎓 — your AI learning companion.<br><br>
+                    Switch to <strong>🎓 Learn Mode</strong> to start a personalized learning journey on any topic. Or just ask me anything!
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Bar -->
+        <div class="input-outer-container">
+            <div class="input-box">
+                <div class="mode-selector-wrap" id="modeSelectorWrap">
+                    <div class="mode-dropdown" id="modeDropdown">
+                        <button class="mode-option active-option" data-mode="normal" id="optNormal">
+                            <span class="mode-option-dot" style="background:#10a37f"></span>Normal
+                        </button>
+                        <button class="mode-option" data-mode="visual" id="optVisual">
+                            <span class="mode-option-dot" style="background:#7c3aed"></span>Visual Mode
+                        </button>
+
+                        <button class="mode-option" data-mode="learn" id="optLearn">
+                            <span class="mode-option-dot" style="background:#6c3de8"></span>🎓 Learn Mode
+                        </button>
+                    </div>
+                    <button class="mode-btn" id="modeSelectorBtn" title="Select Mode">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+                        </svg>
+                        <span id="modeLabelText">Normal</span>
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polyline points="18 15 12 9 6 15"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <textarea id="userInput" placeholder="Ask anything" rows="1"
+                    oninput="this.style.height='';this.style.height=this.scrollHeight+'px'"></textarea>
+                <div class="input-actions">
+                    <button class="send-btn" id="sendBtn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                            <line x1="12" y1="19" x2="12" y2="5"></line>
+                            <polyline points="5 12 12 5 19 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="footer-note">Ruffy AI can make mistakes. Verify important information.</div>
+        </div>
+    </main>
+
+    <script>
+    // ════════════════════════════════════════════════════════════
+    // ── GLOBALS & STATE ─────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    const chatContainer = document.getElementById('chatContainer');
+    const userInput     = document.getElementById('userInput');
+    const sendBtn       = document.getElementById('sendBtn');
+    const themeToggle   = document.getElementById('themeToggle');
+    const sunIcon       = document.getElementById('sunIcon');
+    const moonIcon      = document.getElementById('moonIcon');
+    const historyList   = document.getElementById('historyList');
+
+    let currentUser   = null;
+    let currentChatId = localStorage.getItem('currentChatId') || 'default';
+
+    // Learn state
+    let learnState = {
+        active: false,
+        topic: '',
+        topicSlug: '',
+        roadmap: [],
+        currentIndex: 0,
+        completedTopics: [],    // [{name, score, total}]
+        quizQuestions: [],
+        currentQuestion: 0,
+        userAnswers: [],        // array of numbers (chosen index)
+        stage: 'init',          // init | idle | teaching | quiz | result
+    };
+
+    // ════════════════════════════════════════════════════════════
+    // ── MODE SELECTOR ───────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    let currentMode = 'normal';
+    const modeSelectorBtn = document.getElementById('modeSelectorBtn');
+    const modeDropdown    = document.getElementById('modeDropdown');
+    const modeLabelText   = document.getElementById('modeLabelText');
+    const modeLabels  = { normal:'Normal', visual:'Visual Mode', learn:'🎓 Learn' };
+    const modeColors  = { normal:'', visual:'mode-visual', learn:'mode-learn' };
+    const modePlaceholders = {
+        normal: 'Ask anything',
+        visual: 'Ask a visual question (CNN, SVD...)',
+        learn: 'Type a topic to learn, or pick a chip below!'
+    };
+
+    modeSelectorBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        modeDropdown.classList.toggle('open');
+    });
+    document.addEventListener('click', () => modeDropdown.classList.remove('open'));
+
+    document.querySelectorAll('.mode-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentMode = btn.dataset.mode;
+            modeLabelText.textContent = modeLabels[currentMode];
+            modeSelectorBtn.className = 'mode-btn ' + (modeColors[currentMode] || '');
+            document.querySelectorAll('.mode-option').forEach(b => b.classList.remove('active-option'));
+            btn.classList.add('active-option');
+            modeDropdown.classList.remove('open');
+            userInput.placeholder = modePlaceholders[currentMode];
+            
+            if (currentMode === 'learn') {
+                activateLearnMode();
+            } else {
+                learnState.active = false;
+            }
+        });
+    });
+
+    // ════════════════════════════════════════════════════════════
+    // ── THEME ───────────────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    function applyTheme(theme) {
+        if (theme === 'dark') {
+            document.body.classList.add('dark-mode');
+            sunIcon.style.display = 'none';
+            moonIcon.style.display = 'block';
+        } else {
+            document.body.classList.remove('dark-mode');
+            sunIcon.style.display = 'block';
+            moonIcon.style.display = 'none';
+        }
+    }
+    applyTheme('light');
+    themeToggle.addEventListener('click', () => {
+        const isDark = document.body.classList.toggle('dark-mode');
+        applyTheme(isDark ? 'dark' : 'light');
+    });
+
+    // ════════════════════════════════════════════════════════════
+    // ── AUTH ────────────────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    function parseJwt(token) {
+        const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(decodeURIComponent(atob(b64).split('').map(c =>
+            '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+    }
+
+    function handleCredentialResponse(response) {
+        const data = parseJwt(response.credential);
+        setUser({ id: data.sub, name: data.name, email: data.email, picture: data.picture });
+    }
+
+    function continueAsGuest() {
+        setUser({ id: 'guest_user', name: 'Guest', email: 'guest@example.com', picture: null });
+    }
+
+    function setUser(user) {
+        currentUser = user;
+        document.getElementById('userName').textContent = user.name;
+        if (user.picture) {
+            document.getElementById('userAvatar').innerHTML =
+                `<img src="${user.picture}" style="width:100%;height:100%;border-radius:50%">`;
+        } else {
+            document.getElementById('userAvatar').textContent = user.name.charAt(0).toUpperCase();
+        }
+        document.getElementById('loginOverlay').style.display = 'none';
+        loadHistory();
+        loadHistorySidebar();
+        loadLearnProgress(); // Restore learning state
+    }
+
+    function signOut() {
+        currentUser = null;
+        learnState = { active: false, topic:'', topicSlug:'', roadmap:[], currentIndex:0, completedTopics:[], quizQuestions:[], currentQuestion:0, userAnswers:[], stage:'init' };
+        document.getElementById('loginOverlay').style.display = 'flex';
+        chatContainer.innerHTML = '';
+        historyList.innerHTML = '';
+        updateProgressWidget();
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // ── INTRO ───────────────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    window.addEventListener('DOMContentLoaded', () => {
+        const introOverlay = document.getElementById('introOverlay');
+        const introVideo   = document.getElementById('introVideo');
+        const loginOverlay = document.getElementById('loginOverlay');
+
+        const endIntro = () => {
+            introOverlay.style.opacity = '0';
+            setTimeout(() => {
+                introOverlay.style.display = 'none';
+                if (!currentUser) loginOverlay.style.display = 'flex';
+            }, 800);
+        };
+
+        introVideo.onended = endIntro;
+        introVideo.onerror = endIntro;
+        introVideo.play().catch(() => setTimeout(endIntro, 1200));
+        setTimeout(endIntro, 15000);
+    });
+
+    // ════════════════════════════════════════════════════════════
+    // ── CHAT HELPERS ────────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    function appendMessage(sender, htmlContent) {
+        const wrapper = document.createElement('div');
+        wrapper.className = `message-wrapper ${sender}`;
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        avatar.textContent = sender === 'user' ? (currentUser?.name?.charAt(0)?.toUpperCase() || 'U') : 'R';
+        const content = document.createElement('div');
+        content.className = 'message-content';
+        content.innerHTML = htmlContent;
+        wrapper.appendChild(avatar);
+        wrapper.appendChild(content);
+        chatContainer.appendChild(wrapper);
+        setTimeout(() => { chatContainer.scrollTop = chatContainer.scrollHeight; }, 50);
+    }
+
+    function showTyping() {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'message-wrapper bot typing';
+        wrapper.id = 'typingIndicator';
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        avatar.textContent = 'R';
+        const content = document.createElement('div');
+        content.className = 'message-content';
+        content.innerHTML = `<div class="typing-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+        wrapper.appendChild(avatar);
+        wrapper.appendChild(content);
+        chatContainer.appendChild(wrapper);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+    function hideTyping() {
+        const el = document.getElementById('typingIndicator');
+        if (el) el.remove();
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // ── IMAGEGEN RENDERER ───────────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    mermaid.initialize({ startOnLoad: false, theme: 'default' });
+
+    async function renderImagegenResponse(data) {
+        const cardId     = 'igcard_'    + Date.now();
+        const canvasId   = 'igchart_'   + Date.now();
+        const mermaidId  = 'igmermaid_' + Date.now();
+        let visualHtml   = '';
+
+        if (data.type === 'diagram' && data.data?.mermaid) {
+            visualHtml = `<div class="mermaid-wrap"><div class="mermaid" id="${mermaidId}">${data.data.mermaid}</div></div>`;
+        } else if (data.type === 'chart' && data.data) {
+            visualHtml = `<canvas id="${canvasId}" height="300"></canvas>`;
+        } else if (data.type === 'image' && data.data?.image_url) {
+            visualHtml = `<div class="ig-image-loading">⏳ Generating image...</div>
+                <img class="ig-image" src="${data.data.image_url}" alt="${data.title}" style="display:none"
+                    onload="this.previousElementSibling.remove();this.style.display='block'"
+                    onerror="this.previousElementSibling.textContent='❌ Image generation failed.'">`;
+        } else if (data.type === 'steps' && data.data?.stepsArray) {
+            visualHtml = `<ul class="steps-list">${data.data.stepsArray.map((s,i) =>
+                `<li><span class="step-num">${i+1}</span><span>${s}</span></li>`).join('')}</ul>`;
+        }
+
+        const html = `<div class="imagegen-card" id="${cardId}">
+            <h2>✨ ${data.title || 'ImageGen Result'}</h2>
+            <div class="ig-content">${marked.parse(data.content || '')}</div>
+            ${visualHtml}</div>`;
+        appendMessage('bot', html);
+
+        if (data.type === 'chart' && data.data) {
+            const canvas = document.getElementById(canvasId);
+            if (canvas) new Chart(canvas, {
+                type: data.data.type || 'bar',
+                data: { labels: data.data.labels || [], datasets: data.data.datasets || [] },
+                options: { responsive: true, plugins: { legend: { position: 'top' } } }
+            });
+        }
+        if (data.type === 'diagram' && data.data?.mermaid) {
+            try {
+                const el = document.getElementById(mermaidId);
+                if (el) {
+                    const { svg } = await mermaid.render('mmr_' + Date.now(), data.data.mermaid);
+                    el.innerHTML = svg;
+                }
+            } catch(e) {
+                const el = document.getElementById(mermaidId);
+                if (el) el.innerHTML = `<pre>${data.data.mermaid}</pre>`;
+            }
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // ── SEND MESSAGE & ROUTING ──────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    async function sendMessage() {
+        const text = userInput.value.trim();
+        if (!text || !currentUser) return;
+
+        // If Learn Mode is active and we are taking inputs for learn
+        if (currentMode === 'learn' || learnState.active) {
+            userInput.value = '';
+            userInput.style.height = '';
+            handleLearnAgentInput(text);
+            return;
+        }
+
+        appendMessage('user', marked.parse(text));
+        userInput.value = '';
+        userInput.style.height = '';
+        showTyping();
+
+        try {
+
+            const res  = await fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: text,
+                    user_id: currentUser.id,
+                    chat_id: currentChatId,
+                    visual_mode: currentMode === 'visual'
+                })
+            });
+            const data = await res.json();
+            hideTyping();
+
+            if (data.error) { appendMessage('bot', `<span style="color:#ff6b6b">Error: ${data.error}</span>`); return; }
+
+            if (data.type === 'text') {
+                appendMessage('bot', marked.parse(data.response));
+            } else if (data.type === 'visual') {
+                let html = `<h2 style="color:var(--accent-color)">${data.title}</h2><p>${marked.parse(data.description)}</p>`;
+                if (data.video) html += `<div class="video-step"><video autoplay loop muted controls style="width:100%;border-radius:12px;margin-top:10px;"><source src="/videos/${encodeURIComponent(data.video)}" type="video/mp4"></video></div>`;
+                if (data.steps?.length) data.steps.forEach(step => {
+                    html += `<div class="video-step"><h3>Step ${step.step}: ${step.title}</h3><p>${step.explanation}</p>
+                        ${step.video ? `<video autoplay loop muted controls><source src="/videos/${encodeURIComponent(step.video)}" type="video/mp4"></video>` : ''}</div>`;
+                });
+                appendMessage('bot', html);
+            }
+            loadHistorySidebar();
+        } catch(err) {
+            hideTyping();
+            appendMessage('bot', `<span style="color:#ff6b6b">Error: ${err.message}</span>`);
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // ── HISTORY ─────────────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    async function loadHistory() {
+        if (!currentUser) return;
+        try {
+            const res  = await fetch(`/api/history?user_id=${encodeURIComponent(currentUser.id)}&chat_id=${encodeURIComponent(currentChatId)}`);
+            const data = await res.json();
+            chatContainer.innerHTML = '';
+            if (data.history?.length > 0) {
+                data.history.forEach(item => {
+                    appendMessage(item.role === 'user' ? 'user' : 'bot', marked.parse(item.parts.join(' ')));
+                });
+            } else {
+                appendMessage('bot', `Hello! I'm <strong>Ruffy.ai</strong> 🎓 — your AI learning companion.<br><br>Switch to <strong>🎓 Learn Mode</strong> to start a personalized learning journey on any topic. Or just ask me anything!`);
+            }
+        } catch(err) { console.error(err); }
+    }
+
+    async function loadHistorySidebar() {
+        if (!currentUser) return;
+        try {
+            const res  = await fetch(`/api/history?user_id=${encodeURIComponent(currentUser.id)}`);
+            const data = await res.json();
+            historyList.innerHTML = '';
+            if (data.chats) {
+                data.chats.forEach(chat => {
+                    const div = document.createElement('div');
+                    div.className = 'history-item' + (chat.chat_id === currentChatId ? ' active' : '');
+                    div.textContent = chat.title;
+                    div.onclick = () => loadChat(chat.chat_id);
+                    historyList.appendChild(div);
+                });
+            }
+        } catch(err) { console.error(err); }
+    }
+
+    function loadChat(chatId) {
+        currentChatId = chatId;
+        localStorage.setItem('currentChatId', chatId);
+        loadHistory();
+        loadHistorySidebar();
+    }
+
+    async function startNewChat() {
+        if (!currentUser) return;
+        currentChatId = Date.now().toString();
+        localStorage.setItem('currentChatId', currentChatId);
+        chatContainer.innerHTML = '';
+        appendMessage('bot', `Hello! I'm <strong>Ruffy.ai</strong> 🎓 — your AI learning companion.<br><br>Switch to <strong>🎓 Learn Mode</strong> to start a personalized learning journey!`);
+        loadHistorySidebar();
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // ── EDUCATIONAL AGENT FLOW ──────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    function activateLearnMode() {
+        learnState.active = true;
+        
+        // Show initial prompt
+        appendMessage('bot', `
+            <div class="learn-agent-card" style="border-color: var(--learn-primary);">
+                <h3>🎓 Learn Mode Activated!</h3>
+                <p>Welcome! I am your interactive educational tutor. Tell me, <strong>what topic would you like to study today?</strong></p>
+                <div class="learn-chips-container">
+                    <button class="learn-chip-btn" onclick="handleLearnAgentInput('React')">⚛️ React</button>
+                    <button class="learn-chip-btn" onclick="handleLearnAgentInput('Python')">🐍 Python</button>
+                    <button class="learn-chip-btn" onclick="handleLearnAgentInput('Machine Learning')">🤖 Machine Learning</button>
+                    <button class="learn-chip-btn" onclick="handleLearnAgentInput('SQL')">🗄️ SQL</button>
+                    <button class="learn-chip-btn" onclick="handleLearnAgentInput('Data Structures')">🌳 Data Structures</button>
+                </div>
+            </div>
+        `);
+        learnState.stage = 'init';
+    }
+
+    async function handleLearnAgentInput(text) {
+        appendMessage('user', text);
+        
+        if (learnState.stage === 'init' || !learnState.topic) {
+            // Text is the topic name! Let's generate roadmap
+            learnState.topic = text;
+            learnState.topicSlug = text.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+            learnState.stage = 'generating_roadmap';
+            showTyping();
+            
+            try {
+                const res = await fetch('/learn/roadmap', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topic: text })
+                });
+                const data = await res.json();
+                hideTyping();
+                
+                if (data.error) throw new Error(data.error);
+                
+                learnState.roadmap = data.roadmap;
+                learnState.currentIndex = 0;
+                learnState.completedTopics = [];
+                
+                // Let's see if we have progress saved in Firebase for this user & topic
+                await loadLearnProgress();
+                
+                renderAgentRoadmap();
+            } catch(e) {
+                hideTyping();
+                appendMessage('bot', `❌ Sorry, I encountered an error creating your roadmap: ${e.message}. Please try again.`);
+                learnState.topic = '';
+                learnState.stage = 'init';
+            }
+        } else {
+            // Standard conversational responses while studying
+            appendMessage('bot', `I'm currently guiding you through the roadmap. Please use the interactive buttons in the chat to progress!`);
+        }
+    }
+
+    function renderAgentRoadmap() {
+        const { topic, roadmap, currentIndex, completedTopics } = learnState;
+        const pct = roadmap.length > 0 ? Math.round(completedTopics.length / roadmap.length * 100) : 0;
+        
+        let roadmapListHtml = '';
+        roadmap.forEach((sub, idx) => {
+            const isDone = idx < completedTopics.length;
+            const isCurrent = idx === currentIndex && !isDone;
+            const statusClass = isDone ? 'completed' : isCurrent ? 'current' : 'locked';
+            const icon = isDone ? '✅' : isCurrent ? '📖' : '🔒';
+            const scoreLabel = isDone && completedTopics[idx] ? ` (Score: ${completedTopics[idx].score}/${completedTopics[idx].total})` : '';
+            
+            roadmapListHtml += `
+                <div class="learn-agent-item ${statusClass}">
+                    <span>${icon} Topic ${idx+1}: ${sub}${scoreLabel}</span>
+                </div>
+            `;
+        });
+        
+        appendMessage('bot', `
+            <div class="learn-agent-card">
+                <h3>🗺️ Roadmap: ${topic}</h3>
+                <p>I have designed a custom study path for you. You have completed <strong>${completedTopics.length} of ${roadmap.length}</strong> topics (${pct}%).</p>
+                <div class="learn-agent-list">
+                    ${roadmapListHtml}
+                </div>
+                <button class="learn-agent-btn" onclick="teachCurrentAgentTopic()">
+                    📖 Start Learning: ${roadmap[currentIndex]}
+                </button>
+            </div>
+        `);
+        
+        learnState.stage = 'idle';
+        updateProgressWidget();
+    }
+
+    async function teachCurrentAgentTopic() {
+        const subtopic = learnState.roadmap[learnState.currentIndex];
+        showTyping();
+        
+        try {
+            const res = await fetch('/learn/teach', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topic: learnState.topic, subtopic })
+            });
+            const data = await res.json();
+            hideTyping();
+            
+            if (data.error) throw new Error(data.error);
+            
+            appendMessage('bot', `
+                <div class="message-content" style="border-left: 4px solid var(--learn-primary); padding-left: 15px; margin: 10px 0;">
+                    ${marked.parse(data.lesson)}
+                    <button class="learn-agent-btn" onclick="startAgentQuiz()">
+                        🧠 Take the Quiz (5 Questions) →
+                    </button>
+                </div>
+            `);
+            learnState.stage = 'teaching';
+        } catch(e) {
+            hideTyping();
+            appendMessage('bot', `❌ Error loading lesson: ${e.message}. Please click the button below to retry.`);
+        }
+    }
+
+    async function reteachCurrentAgentTopic(score, total) {
+        const subtopic = learnState.roadmap[learnState.currentIndex];
+        showTyping();
+        
+        try {
+            const res = await fetch('/learn/reteach', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topic: learnState.topic, subtopic, score, total })
+            });
+            const data = await res.json();
+            hideTyping();
+            
+            if (data.error) throw new Error(data.error);
+            
+            appendMessage('bot', `
+                <div class="message-content" style="border-left: 4px solid var(--learn-warning); padding-left: 15px; margin: 10px 0;">
+                    ${marked.parse(data.lesson)}
+                    <button class="learn-agent-btn" onclick="startAgentQuiz()">
+                        🧠 Start New Quiz →
+                    </button>
+                </div>
+            `);
+            learnState.stage = 'teaching';
+        } catch(e) {
+            hideTyping();
+            appendMessage('bot', `❌ Error loading simplified lesson: ${e.message}.`);
+        }
+    }
+
+    async function startAgentQuiz() {
+        const subtopic = learnState.roadmap[learnState.currentIndex];
+        showTyping();
+        
+        try {
+            const res = await fetch('/learn/quiz', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ topic: learnState.topic, subtopic })
+            });
+            const data = await res.json();
+            hideTyping();
+            
+            if (data.error) throw new Error(data.error);
+            
+            learnState.quizQuestions = data.questions;
+            learnState.currentQuestion = 0;
+            learnState.userAnswers = [];
+            learnState.stage = 'quiz';
+            
+            renderAgentQuestion();
+        } catch(e) {
+            hideTyping();
+            appendMessage('bot', `❌ Error loading quiz: ${e.message}.`);
+        }
+    }
+
+    function renderAgentQuestion() {
+        const qNum = learnState.currentQuestion;
+        const q = learnState.quizQuestions[qNum];
+        const total = learnState.quizQuestions.length;
+        
+        let optionsHtml = '';
+        q.options.forEach((opt, idx) => {
+            optionsHtml += `
+                <button class="quiz-agent-opt" id="opt_${qNum}_${idx}" onclick="selectAgentOption(${idx}, ${q.correct})">
+                    <span>${String.fromCharCode(65 + idx)})</span> ${opt}
+                </button>
+            `;
+        });
+        
+        appendMessage('bot', `
+            <div class="learn-agent-card" style="border-color: var(--learn-secondary);" id="q_card_${qNum}">
+                <div style="font-size:0.75rem; font-weight:700; color:var(--learn-primary); margin-bottom:8px;">
+                    QUESTION ${qNum + 1} OF ${total}
+                </div>
+                <div style="font-size:1.05rem; font-weight:600; line-height:1.4; color:var(--text-primary);">
+                    ${q.question}
+                </div>
+                <div class="quiz-agent-options">
+                    ${optionsHtml}
+                </div>
+            </div>
+        `);
+    }
+
+    function selectAgentOption(chosenIdx, correctIdx) {
+        const qNum = learnState.currentQuestion;
+        const total = learnState.quizQuestions.length;
+        
+        // Disable choices in this specific card
+        const opts = document.querySelectorAll(`#q_card_${qNum} .quiz-agent-opt`);
+        opts.forEach((btn, idx) => {
+            btn.classList.add('disabled');
+            btn.onclick = null;
+            if (idx === correctIdx) {
+                btn.classList.add('correct');
+            } else if (idx === chosenIdx) {
+                btn.classList.add('wrong');
+            }
+        });
+        
+        learnState.userAnswers.push(chosenIdx);
+        
+        // Show Next button or Results button
+        const card = document.getElementById(`q_card_${qNum}`);
+        const isLast = qNum === total - 1;
+        const actionBtn = document.createElement('button');
+        actionBtn.className = 'learn-agent-btn';
+        actionBtn.style.marginTop = '15px';
+        actionBtn.textContent = isLast ? '📊 Submit & See Score' : 'Next Question →';
+        actionBtn.onclick = () => {
+            actionBtn.remove();
+            if (isLast) {
+                evaluateAgentScore();
+            } else {
+                learnState.currentQuestion++;
+                renderAgentQuestion();
+            }
+        };
+        card.appendChild(actionBtn);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    async function evaluateAgentScore() {
+        const correct = learnState.userAnswers.filter((ans, idx) => ans === learnState.quizQuestions[idx].correct).length;
+        const total = learnState.quizQuestions.length;
+        const pct = Math.round((correct / total) * 100);
+        const pass = pct >= 60;
+        
+        const emoji = pass ? '🎉' : '💪';
+        const title = pass ? 'Excellent Job!' : 'Keep Practicing!';
+        const message = pass 
+            ? `You scored <strong>${pct}% (${correct}/${total})</strong>. You passed the 60% threshold and mastered this topic!` 
+            : `You scored <strong>${pct}% (${correct}/${total})</strong>. This is below the 60% threshold. Let's study this topic again with easier explanations.`;
+        
+        let primaryBtn = '';
+        const isLastTopic = learnState.currentIndex + 1 >= learnState.roadmap.length;
+        
+        if (pass) {
+            // Save state
+            const subtopicName = learnState.roadmap[learnState.currentIndex];
+            learnState.completedTopics.push({ name: subtopicName, score: correct, total });
+            learnState.currentIndex++;
+            
+            if (isLastTopic) {
+                primaryBtn = `<button class="learn-agent-btn" onclick="finishAgentRoadmap()">🏆 Complete Roadmap!</button>`;
+            } else {
+                primaryBtn = `<button class="learn-agent-btn" onclick="renderAgentRoadmap()">➡️ Next: ${learnState.roadmap[learnState.currentIndex]}</button>`;
+            }
+        } else {
+            primaryBtn = `<button class="learn-agent-btn" style="background:var(--learn-warning);" onclick="reteachCurrentAgentTopic(${correct}, ${total})">🔄 Re-explain Topic</button>`;
+        }
+        
+        appendMessage('bot', `
+            <div class="learn-agent-card" style="border-color: ${pass ? 'var(--learn-success)' : 'var(--learn-danger)'};">
+                <div style="font-size: 2.5rem; text-align: center; margin-bottom: 10px;">${emoji}</div>
+                <h3 style="color: ${pass ? 'var(--learn-success)' : 'var(--learn-danger)'}; text-align: center; justify-content: center;">
+                    ${title}
+                </h3>
+                <p style="text-align: center; font-size: 0.95rem; line-height: 1.5;">
+                    ${message}
+                </p>
+                <div style="margin-top: 15px;">
+                    ${primaryBtn}
+                </div>
+            </div>
+        `);
+        
+        await saveLearnProgress();
+        updateProgressWidget();
+    }
+
+    function finishAgentRoadmap() {
+        let rowsHtml = '';
+        learnState.completedTopics.forEach(ct => {
+            rowsHtml += `
+                <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border-color);">
+                    <span>✅ <strong>${ct.name}</strong></span>
+                    <span>${ct.score}/${ct.total} (${Math.round(ct.score/ct.total*100)}%)</span>
+                </div>
+            `;
+        });
+        
+        appendMessage('bot', `
+            <div class="learn-agent-card" style="border-color: var(--learn-primary);">
+                <div style="font-size: 3rem; text-align: center; margin-bottom: 10px;">🏆</div>
+                <h3 style="text-align: center; justify-content: center; color: var(--learn-primary);">
+                    Roadmap Completed!
+                </h3>
+                <p style="text-align: center;">Congratulations, you have fully completed the <strong>${learnState.topic}</strong> course!</p>
+                <div style="margin: 15px 0; font-size: 0.9rem;">
+                    ${rowsHtml}
+                </div>
+                <button class="learn-agent-btn" onclick="activateLearnMode()">🚀 Learn a New Topic</button>
+            </div>
+        `);
+        
+        // Reset state
+        learnState = { active: true, topic:'', topicSlug:'', roadmap:[], currentIndex:0, completedTopics:[], quizQuestions:[], currentQuestion:0, userAnswers:[], stage:'init' };
+        updateProgressWidget();
+    }
+
+    function resumeAgentSession() {
+        if (!learnState.topic || learnState.roadmap.length === 0) return;
+        renderAgentRoadmap();
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // ── FIREBASE PROGRESS SYNC ──────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    async function saveLearnProgress() {
+        if (!currentUser || !learnState.topicSlug) return;
+        try {
+            await fetch(`/learn/progress?user_id=${encodeURIComponent(currentUser.id)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: currentUser.id,
+                    topic_slug: learnState.topicSlug,
+                    progress: {
+                        topic: learnState.topic,
+                        roadmap: learnState.roadmap,
+                        current_index: learnState.currentIndex,
+                        completed_topics: learnState.completedTopics,
+                        status: learnState.currentIndex >= learnState.roadmap.length ? 'completed' : 'in_progress',
+                        updated_at: new Date().toISOString()
+                    }
+                })
+            });
+        } catch(e) { console.warn('Progress save failed:', e); }
+    }
+
+    async function loadLearnProgress() {
+        if (!currentUser) return;
+        try {
+            const res  = await fetch(`/learn/progress?user_id=${encodeURIComponent(currentUser.id)}`);
+            const data = await res.json();
+            const all  = data.progress || {};
+
+            // Find the most recently updated in-progress topic
+            let latest = null, latestTime = '';
+            Object.values(all).forEach(p => {
+                if (p && p.status === 'in_progress' && p.updated_at > latestTime) {
+                    latest    = p;
+                    latestTime = p.updated_at;
+                }
+            });
+
+            if (latest && latest.roadmap?.length > 0) {
+                learnState.active           = true;
+                learnState.topic            = latest.topic;
+                learnState.topicSlug        = latest.topic.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+                learnState.roadmap          = latest.roadmap;
+                learnState.currentIndex     = latest.current_index || 0;
+                learnState.completedTopics  = latest.completed_topics || [];
+                learnState.stage            = 'idle';
+                
+                // Set active mode selector option to Learn
+                currentMode = 'learn';
+                modeLabelText.textContent = '🎓 Learn';
+                modeSelectorBtn.className = 'mode-btn mode-learn';
+                userInput.placeholder = modePlaceholders.learn;
+                document.querySelectorAll('.mode-option').forEach(b => b.classList.remove('active-option'));
+                document.getElementById('optLearn').classList.add('active-option');
+                
+                updateProgressWidget();
+            }
+        } catch(e) { console.warn('Progress load failed:', e); }
+    }
+
+    function updateProgressWidget() {
+        const { topic, roadmap, completedTopics } = learnState;
+        const widget = document.getElementById('learnProgressWidget');
+        if (!topic || roadmap.length === 0) {
+            widget.classList.remove('visible');
+            return;
+        }
+        widget.classList.add('visible');
+        document.getElementById('lpwTopic').textContent = topic;
+        const pct = roadmap.length > 0 ? Math.round(completedTopics.length / roadmap.length * 100) : 0;
+        document.getElementById('lpwBar').style.width   = pct + '%';
+        document.getElementById('lpwStats').textContent = `${completedTopics.length} / ${roadmap.length} topics done`;
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // ── EVENT LISTENERS ─────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    sendBtn.addEventListener('click', sendMessage);
+    userInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+    </script>
+</body>
+</html>
